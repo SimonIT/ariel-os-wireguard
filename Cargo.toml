@@ -1,0 +1,33 @@
+[package]
+name = "ariel-os-wireguard"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+edition = "2024"
+
+[dependencies]
+embassy-net = { version = "0.7.1", features = ["dhcpv4", "medium-ethernet", "udp", "medium-ip"] }
+embassy-time = "0.5.0"
+embassy-net-driver-channel = "0.3.2"
+boringtun = { git = "https://github.com/SimonIT/boringtun.git", branch = "no_std", default-features = false, features = ["ariel-os", "alloc"] }
+smoltcp = { version = "0.12.0", default-features = false, features = [
+    "socket",
+    "async",
+    "medium-ip",
+    "socket-udp"
+] }
+embassy-futures = "0.1.2"
+defmt = { version = "1.0.1", optional = true }
+log = { version = "0.4.28", optional = true }
+
+[features]
+default = ["proto-ipv4", "proto-ipv6"]
+proto-ipv4 = ["embassy-net/proto-ipv4", "smoltcp/proto-ipv4"]
+proto-ipv6 = ["embassy-net/proto-ipv6", "smoltcp/proto-ipv6"]
+defmt = ["dep:defmt", "smoltcp/defmt", "embassy-net/defmt", "embassy-futures/defmt", "embassy-time/defmt", "embassy-net-driver-channel/defmt"]
+log = ["dep:log", "smoltcp/log", "embassy-net/log", "embassy-futures/log", "embassy-time/log", "embassy-net-driver-channel/log"]
+
+[patch.crates-io]
+# boringtun
+ip_network = { git = "https://github.com/SimonIT/ip_network.git", branch = "no_std" }
+ip_network_table = { git = "https://github.com/SimonIT/ip_network_table.git", branch = "no_std" }
+ip_network_table-deps-treebitmap = { git = "https://github.com/SimonIT/treebitmap.git", branch = "fix-alloc" }

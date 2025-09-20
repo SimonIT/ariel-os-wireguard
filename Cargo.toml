@@ -7,7 +7,7 @@ edition = "2024"
 [dependencies]
 embassy-net = { version = "0.6.0", features = ["dhcpv4", "medium-ethernet", "udp", "medium-ip"] }
 embassy-time = "0.4.0"
-embassy-net-driver-channel = "0.3.2"
+embassy-net-driver-channel = "0.3.0"
 boringtun = { git = "https://github.com/SimonIT/boringtun.git", branch = "no_std", default-features = false, features = ["ariel-os", "alloc"] }
 smoltcp = { version = "0.12.0", default-features = false, features = [
     "socket",

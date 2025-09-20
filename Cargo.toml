@@ -5,8 +5,8 @@ license = "MIT OR Apache-2.0"
 edition = "2024"
 
 [dependencies]
-embassy-net = { version = "0.7.1", features = ["dhcpv4", "medium-ethernet", "udp", "medium-ip"] }
-embassy-time = "0.5.0"
+embassy-net = { version = "0.6.0", features = ["dhcpv4", "medium-ethernet", "udp", "medium-ip"] }
+embassy-time = "0.4.0"
 embassy-net-driver-channel = "0.3.2"
 boringtun = { git = "https://github.com/SimonIT/boringtun.git", branch = "no_std", default-features = false, features = ["ariel-os", "alloc"] }
 smoltcp = { version = "0.12.0", default-features = false, features = [
@@ -15,7 +15,7 @@ smoltcp = { version = "0.12.0", default-features = false, features = [
     "medium-ip",
     "socket-udp"
 ] }
-embassy-futures = "0.1.2"
+embassy-futures = "0.1.1"
 defmt = { version = "1.0.1", optional = true }
 log = { version = "0.4.28", optional = true }
 

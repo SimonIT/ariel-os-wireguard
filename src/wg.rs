@@ -14,7 +14,7 @@ use smoltcp::wire::Ipv4Packet;
 use smoltcp::wire::Ipv6Packet;
 use smoltcp::wire::{IpProtocol, IpVersion};
 
-pub(crate) const MAX_PACKET: usize = 65536;
+pub(crate) const MAX_PACKET: usize = 2048;
 
 pub async fn send_ip_packet(
     tun: &mut Tunn,
@@ -125,7 +125,6 @@ pub async fn consume(
                 }
             }?;
             loop {
-                let mut send_buf = [0u8; MAX_PACKET];
                 match tun.decapsulate(None, &[], &mut send_buf) {
                     TunnResult::WriteToNetwork(packet) => {
                         match socket.send_to(packet, config.endpoint_addr).await {

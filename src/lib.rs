@@ -180,8 +180,8 @@ impl<'d> Runner<'d> {
 /// - a `Device` that you must pass to the `embassy-net` stack.
 /// - a `Runner`. You must call `.run()` on it in a background task.
 pub fn new<const N_RX: usize, const N_TX: usize>(
-    state: &mut State<N_RX, N_TX>,
-) -> (Device, Runner) {
+    state: &'_ mut State<N_RX, N_TX>,
+) -> (Device<'_>, Runner<'_>) {
     let (runner, device) = ch::new(&mut state.ch_state, ch::driver::HardwareAddress::Ip);
     (device, Runner { ch: runner })
 }

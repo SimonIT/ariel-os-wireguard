@@ -85,7 +85,7 @@ impl<'d> Runner<'d> {
         stack: Stack<'static>,
         config: &Config,
     ) -> Result<Infallible, RunError> {
-        stack.wait_link_up().await;
+        stack.wait_config_up().await;
 
         let (state_chan, mut rx_chan, mut tx_chan) = self.ch.borrow_split();
         state_chan.set_link_state(LinkState::Down);

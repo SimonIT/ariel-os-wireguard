@@ -7,13 +7,13 @@ use crate::wg::{MAX_PACKET, consume, create_tunnel, handle_routine_tun_result, s
 use boringtun::noise::errors::WireGuardError;
 use core::convert::Infallible;
 use core::mem::MaybeUninit;
-use embassy_futures::select::{Either, select};
+use embassy_futures::select::{Either, select, select3, Select3, Either3};
 use embassy_net::Stack;
 use embassy_net::udp::{BindError, RecvError, SendError, UdpSocket};
 use embassy_net_driver_channel as ch;
 use embassy_net_driver_channel::driver::LinkState;
-#[cfg(feature = "log")]
-use log::{error, info, warn};
+#[cfg(feature = "defmt")]
+use defmt::{debug, error, info, warn};
 use smoltcp::socket::udp::PacketMetadata;
 
 const MTU: usize = 1500;
@@ -58,6 +58,7 @@ pub enum RunError {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum WGError {
     SendRoutineError(SendError),
     SendDecapsulationError(SendError),
@@ -102,7 +103,7 @@ impl<'d> Runner<'d> {
 
         if let Err(e) = socket.bind(config.endpoint_bind_addr) {
             // TODO needed?
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             info!("bind error: {:?}", e);
             return Err(RunError::Bind(e));
         }
@@ -112,28 +113,33 @@ impl<'d> Runner<'d> {
         let mut needs_poll = true;
 
         loop {
-            let mut send_buf = [0u8; MAX_PACKET];
-            let mut res = tun.update_timers(&mut send_buf);
-            loop {
-                match handle_routine_tun_result(&socket, config, res).await {
-                    Ok(_) => {
-                        state_chan.set_link_state(LinkState::Up);
-                        break;
-                    }
-                    Err(e) => {
-                        #[cfg(feature = "log")]
-                        error!("{:?}", e);
-                        if let WGError::PreparationError(WireGuardError::ConnectionExpired) = e {
-                            #[cfg(feature = "log")]
-                            warn!("Wireguard handshake has expired!");
-                            res = tun.format_handshake_initiation(&mut send_buf[..], false);
-                        } else {
-                            state_chan.set_link_state(LinkState::Down);
+            let routine_fut = async {
+                let mut send_buf = [0u8; MAX_PACKET];
+                debug!("Updating timers");
+                let mut res = tun.update_timers(&mut send_buf);
+                loop {
+                    debug!("Handling routine result");
+                    match handle_routine_tun_result(&socket, config, res).await {
+                        Ok(_) => {
+                            debug!("Successfully handled routine result");
+                            state_chan.set_link_state(LinkState::Up);
                             break;
+                        }
+                        Err(e) => {
+                            #[cfg(feature = "defmt")]
+                            error!("{:?}", e);
+                            if let WGError::PreparationError(WireGuardError::ConnectionExpired) = e {
+                                #[cfg(feature = "defmt")]
+                                warn!("Wireguard handshake has expired!");
+                                res = tun.format_handshake_initiation(&mut send_buf[..], false);
+                            } else {
+                                state_chan.set_link_state(LinkState::Down);
+                                break;
+                            }
                         }
                     }
                 }
-            }
+            };
 
             let rx_fut = async {
                 let rx_buf = rx_chan.rx_buf().await;
@@ -148,22 +154,25 @@ impl<'d> Runner<'d> {
                 Ok((rx_buf, rx_data))
             };
             let tx_fut = tx_chan.tx_buf();
-            match select(rx_fut, tx_fut).await {
-                Either::First(r) => {
+            match select3(routine_fut, rx_fut, tx_fut).await {
+                Either3::First(_) => {
+                    debug!("Routine completed");
+                }
+                Either3::Second(r) => {
                     needs_poll = false;
                     match consume(stack, &mut tun, &socket, config, r?).await {
                         Ok(_) => {}
                         Err(e) => {
-                            #[cfg(feature = "log")]
+                            #[cfg(feature = "defmt")]
                             error!("{:?}", e);
                         }
                     }
                 }
-                Either::Second(pkt) => {
+                Either3::Third(pkt) => {
                     match send_ip_packet(&mut tun, &socket, config, pkt).await {
                         Ok(_) => {}
                         Err(e) => {
-                            #[cfg(feature = "log")]
+                            #[cfg(feature = "defmt")]
                             error!("{:?}", e);
                         }
                     }

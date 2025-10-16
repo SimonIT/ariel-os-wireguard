@@ -10,11 +10,17 @@ const DEFAULT_PORT_FORWARD_SOURCE: &str = "127.0.0.1";
 
 #[derive(Clone)]
 pub struct Config {
+    /// The private key of this peer. The corresponding public key should be registered in the WireGuard endpoint.
     pub private_key: StaticSecret,
+    /// The public key of the WireGuard endpoint (remote).
     pub endpoint_public_key: PublicKey,
+    /// The pre-shared key (PSK) as configured with the peer.
     pub preshared_key: Option<[u8; 32]>,
+    /// The address (IP + port) of the WireGuard endpoint (remote). Example: 1.2.3.4:51820
     pub endpoint_addr: SocketAddr,
+    /// The address (IP + port) used to bind the local UDP socket for the WireGuard tunnel. Example: 1.2.3.4:30000.
     pub endpoint_bind_addr: SocketAddr,
+    /// Configures a persistent keep-alive for the WireGuard tunnel, in seconds.
     pub keepalive_seconds: Option<u16>,
 }
 

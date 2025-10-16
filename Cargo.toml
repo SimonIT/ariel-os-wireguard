@@ -17,17 +17,17 @@ smoltcp = { version = "0.12.0", default-features = false, features = [
 ] }
 embassy-futures = "0.1.1"
 defmt = { version = "1.0.1", optional = true }
-log = { version = "0.4.28", optional = true }
 
 [features]
 default = ["proto-ipv4", "proto-ipv6"]
 proto-ipv4 = ["embassy-net/proto-ipv4", "smoltcp/proto-ipv4"]
 proto-ipv6 = ["embassy-net/proto-ipv6", "smoltcp/proto-ipv6"]
-defmt = ["dep:defmt", "smoltcp/defmt", "embassy-net/defmt", "embassy-futures/defmt", "embassy-time/defmt", "embassy-net-driver-channel/defmt"]
-log = ["dep:log", "smoltcp/log", "embassy-net/log", "embassy-futures/log", "embassy-time/log", "embassy-net-driver-channel/log"]
+defmt = ["dep:defmt", "smoltcp/defmt", "embassy-net/defmt", "embassy-futures/defmt", "embassy-time/defmt", "embassy-net-driver-channel/defmt", "boringtun/defmt"]
 
 [patch.crates-io]
 # boringtun
 ip_network = { git = "https://github.com/SimonIT/ip_network.git", branch = "no_std" }
 ip_network_table = { git = "https://github.com/SimonIT/ip_network_table.git", branch = "no_std" }
 ip_network_table-deps-treebitmap = { git = "https://github.com/SimonIT/treebitmap.git", branch = "fix-alloc" }
+ariel-os-threads = { git = "https://github.com/ariel-os/ariel-os.git", tag = "v0.2.1" }
+ring = { git = "https://github.com/SimonIT/ring.git", branch = "ariel-os" }

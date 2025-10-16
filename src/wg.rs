@@ -3,11 +3,11 @@ use crate::WGError::{EncapsulationError, Other, SendRoutineError};
 use crate::config::{Config, PortProtocol};
 use boringtun::noise::errors::WireGuardError;
 use boringtun::noise::{Tunn, TunnResult};
+#[cfg(feature = "defmt")]
+use defmt::{debug, error, trace, warn};
 use embassy_net::Stack;
 use embassy_net::udp::UdpSocket;
 use embassy_time::{Duration, Timer};
-#[cfg(feature = "log")]
-use log::{Level, debug, error, log_enabled, trace, warn};
 #[cfg(feature = "proto-ipv4")]
 use smoltcp::wire::Ipv4Packet;
 #[cfg(feature = "proto-ipv6")]
@@ -28,7 +28,7 @@ pub async fn send_ip_packet(
     match encapsulate_result {
         TunnResult::WriteToNetwork(packet) => {
             let res = socket.send_to(packet, config.endpoint_addr).await;
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             debug!(
                 "Sent {} bytes to WireGuard endpoint (encrypted IP packet)",
                 packet.len()
@@ -36,16 +36,18 @@ pub async fn send_ip_packet(
             res.map_err(WGError::SendEncryptedError)
         }
         TunnResult::Err(e) => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             error!("Failed to encapsulate an IP packet: {:?}", e);
             Err(EncapsulationError(e))
         }
         TunnResult::Done => {
             // Ignored
+            #[cfg(feature = "defmt")]
+            debug!("Encapsulation resulted in Done, ignoring");
             Ok(())
         }
         other => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             error!(
                 "Unexpected WireGuard state during encapsulation: {:?}",
                 other
@@ -62,7 +64,7 @@ pub(crate) async fn handle_routine_tun_result(
 ) -> Result<(), WGError> {
     match result {
         TunnResult::WriteToNetwork(packet) => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             debug!(
                 "Sending a routine packet of {} bytes to WireGuard endpoint",
                 packet.len()
@@ -73,13 +75,13 @@ pub(crate) async fn handle_routine_tun_result(
                 .map_err(SendRoutineError)
         }
         TunnResult::Err(WireGuardError::ConnectionExpired) => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             warn!("Wireguard handshake has expired!");
 
             Err(WGError::ConnectionExpired)
         }
         TunnResult::Err(e) => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             error!(
                 "Failed to prepare a routine packet for WireGuard endpoint: {:?}",
                 e
@@ -89,11 +91,13 @@ pub(crate) async fn handle_routine_tun_result(
         }
         TunnResult::Done => {
             // Sleep for a bit
+            #[cfg(feature = "defmt")]
+            debug!("WireGuard routine task done, sleeping for 1 ms");
             Timer::after(Duration::from_millis(1)).await;
             Ok(())
         }
         other => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             warn!("Unexpected WireGuard routine task state: {:?}", other);
             Err(Other)
         }
@@ -113,10 +117,12 @@ pub async fn consume(
     let decapsulate_result = tun.decapsulate(None, rx_data, &mut send_buf);
     match decapsulate_result {
         TunnResult::WriteToNetwork(packet) => {
+            #[cfg(feature = "defmt")]
+            debug!("Decapsulation requested sending a packet to WireGuard endpoint");
             match socket.send_to(packet, config.endpoint_addr).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    #[cfg(feature = "log")]
+                    #[cfg(feature = "defmt")]
                     error!(
                         "Failed to send a decapsulation-instructed packet to WireGuard endpoint: {:?}",
                         e
@@ -130,7 +136,7 @@ pub async fn consume(
                         match socket.send_to(packet, config.endpoint_addr).await {
                             Ok(_) => Ok(()),
                             Err(e) => {
-                                #[cfg(feature = "log")]
+                                #[cfg(feature = "defmt")]
                                 error!(
                                     "Failed to send a decapsulation-instructed packet to WireGuard endpoint: {:?}",
                                     e
@@ -144,7 +150,7 @@ pub async fn consume(
             }
         }
         TunnResult::WriteToTunnelV4(packet, _) | TunnResult::WriteToTunnelV6(packet, _) => {
-            #[cfg(feature = "log")]
+            #[cfg(feature = "defmt")]
             debug!(
                 "WireGuard endpoint sent an IP packet of {} bytes",
                 packet.len()
@@ -207,8 +213,8 @@ pub(crate) fn route_protocol(stack: Stack, packet: &[u8]) -> Option<PortProtocol
 }
 
 fn trace_ip_packet(message: &str, packet: &[u8]) {
-    #[cfg(feature = "log")]
-    if log_enabled!(Level::Trace) {
+    #[cfg(feature = "defmt")]
+    {
         use smoltcp::wire::*;
 
         match IpVersion::of_packet(packet) {

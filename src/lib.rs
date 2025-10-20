@@ -128,10 +128,10 @@ impl<'d> Runner<'d> {
                         Err(e) => {
                             #[cfg(feature = "defmt")]
                             error!("{:?}", e);
-                            if let WGError::PreparationError(WireGuardError::ConnectionExpired) = e {
+                            if let WGError::ConnectionExpired = e {
                                 #[cfg(feature = "defmt")]
                                 warn!("Wireguard handshake has expired!");
-                                res = tun.format_handshake_initiation(&mut send_buf[..], false);
+                                res = tun.format_handshake_initiation(&mut send_buf, false);
                             } else {
                                 state_chan.set_link_state(LinkState::Down);
                                 break;

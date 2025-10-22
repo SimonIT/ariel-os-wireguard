@@ -66,8 +66,9 @@ pub(crate) async fn handle_routine_tun_result(
         TunnResult::WriteToNetwork(packet) => {
             #[cfg(feature = "defmt")]
             debug!(
-                "Sending a routine packet of {} bytes to WireGuard endpoint",
-                packet.len()
+                "Sending a routine packet of {} bytes to {}",
+                packet.len(),
+                config.endpoint_addr
             );
             socket
                 .send_to(packet, config.endpoint_addr)
@@ -93,7 +94,7 @@ pub(crate) async fn handle_routine_tun_result(
             // Sleep for a bit
             #[cfg(feature = "defmt")]
             debug!("WireGuard routine task done, sleeping for 1 ms");
-            Timer::after(Duration::from_millis(1)).await;
+            Timer::after_millis(1).await;
             Ok(())
         }
         other => {

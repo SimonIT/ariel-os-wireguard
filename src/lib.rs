@@ -101,11 +101,24 @@ impl<'d> Runner<'d> {
         let mut socket =
             UdpSocket::new(stack, &mut rx_meta, &mut rx_buf, &mut tx_meta, &mut tx_buf);
 
-        if let Err(e) = socket.bind(config.endpoint_bind_addr) {
-            // TODO needed?
-            #[cfg(feature = "defmt")]
-            info!("bind error: {:?}", e);
-            return Err(RunError::Bind(e));
+        #[cfg(feature = "proto-ipv6")]
+        if let Some(ip_config) = stack.config_v6() {
+            let ip = ip_config.address.address();
+            if let Err(e) = socket.bind(SocketAddr::new(IpAddr::from(ip), config.port)) {
+                #[cfg(feature = "defmt")]
+                info!("bind error: {:?}", e);
+                return Err(RunError::Bind(e));
+            }
+        }
+
+        #[cfg(feature = "proto-ipv4")]
+        if let Some(ip_config) = stack.config_v4() {
+            let ip = ip_config.address.address();
+            if let Err(e) = socket.bind(SocketAddr::new(IpAddr::from(ip), config.port)) {
+                #[cfg(feature = "defmt")]
+                info!("bind error: {:?}", e);
+                return Err(RunError::Bind(e));
+            }
         }
 
         let mut tun = create_tunnel(config);

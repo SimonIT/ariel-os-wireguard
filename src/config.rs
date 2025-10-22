@@ -18,10 +18,10 @@ pub struct Config {
     pub preshared_key: Option<[u8; 32]>,
     /// The address (IP + port) of the WireGuard endpoint (remote). Example: 1.2.3.4:51820
     pub endpoint_addr: SocketAddr,
-    /// The address (IP + port) used to bind the local UDP socket for the WireGuard tunnel. Example: 1.2.3.4:30000.
-    pub endpoint_bind_addr: SocketAddr,
     /// Configures a persistent keep-alive for the WireGuard tunnel, in seconds.
     pub keepalive_seconds: Option<u16>,
+    /// The port for incoming packets
+    pub port: u16,
 }
 
 /// Layer 7 protocols for ports.

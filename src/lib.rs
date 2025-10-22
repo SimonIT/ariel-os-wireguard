@@ -7,7 +7,10 @@ use crate::wg::{MAX_PACKET, consume, create_tunnel, handle_routine_tun_result, s
 use boringtun::noise::errors::WireGuardError;
 use core::convert::Infallible;
 use core::mem::MaybeUninit;
-use embassy_futures::select::{Either, select, select3, Select3, Either3};
+use core::net::{IpAddr, SocketAddr};
+#[cfg(feature = "defmt")]
+use defmt::{debug, error, info, warn};
+use embassy_futures::select::{Either, Either3, Select3, select, select3};
 use embassy_net::Stack;
 use embassy_net::udp::{BindError, RecvError, SendError, UdpSocket};
 use embassy_net_driver_channel as ch;
@@ -67,6 +70,7 @@ pub enum WGError {
     ConnectionExpired,
     PreparationError(WireGuardError),
     ReceiveError,
+    DecapsulationError(WireGuardError),
     Other,
 }
 
@@ -174,7 +178,11 @@ impl<'d> Runner<'d> {
                 Either3::Second(r) => {
                     needs_poll = false;
                     match consume(stack, &mut tun, &socket, config, r?).await {
-                        Ok(_) => {}
+                        Ok(len) => {
+                            if len > 0 {
+                                rx_chan.rx_done(len);
+                            }
+                        }
                         Err(e) => {
                             #[cfg(feature = "defmt")]
                             error!("{:?}", e);
@@ -183,13 +191,14 @@ impl<'d> Runner<'d> {
                 }
                 Either3::Third(pkt) => {
                     match send_ip_packet(&mut tun, &socket, config, pkt).await {
-                        Ok(_) => {}
+                        Ok(_) => {
+                            tx_chan.tx_done();
+                        }
                         Err(e) => {
                             #[cfg(feature = "defmt")]
                             error!("{:?}", e);
                         }
                     }
-                    tx_chan.tx_done();
                 }
             }
         }

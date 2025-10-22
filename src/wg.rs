@@ -111,7 +111,7 @@ pub async fn consume(
     socket: &UdpSocket<'_>,
     config: &Config,
     r: (&mut [u8], &[u8]),
-) -> Result<(), WGError> {
+) -> Result<usize, WGError> {
     let (buf, rx_data) = r;
     let mut send_buf = [0u8; MAX_PACKET];
 
@@ -132,6 +132,7 @@ pub async fn consume(
                 }
             }?;
             loop {
+                let mut send_buf = [0u8; MAX_PACKET];
                 match tun.decapsulate(None, &[], &mut send_buf) {
                     TunnResult::WriteToNetwork(packet) => {
                         match socket.send_to(packet, config.endpoint_addr).await {
@@ -146,7 +147,11 @@ pub async fn consume(
                             }
                         }?
                     }
-                    _ => { Err(Other) }?,
+                    TunnResult::Err(e) => {
+                        #[cfg(feature = "defmt")]
+                        error!("Failed to decapsulate a received packet: {:?}", e);
+                    }
+                    _ => break Ok(0),
                 }
             }
         }
@@ -163,9 +168,14 @@ pub async fn consume(
             if let Some(proto) = route_protocol(stack, packet) {
                 buf[..packet.len()].copy_from_slice(packet);
             }
-            Ok(())
+            Ok(packet.len())
         }
-        _ => Ok(()),
+        TunnResult::Err(e) => {
+            #[cfg(feature = "defmt")]
+            error!("Failed to decapsulate a received packet: {:?}", e);
+            Ok(0)
+        }
+        _ => Ok(0),
     }
 }
 

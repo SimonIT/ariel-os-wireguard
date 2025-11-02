@@ -4,7 +4,7 @@ use crate::config::{Config, PortProtocol};
 use boringtun::noise::errors::WireGuardError;
 use boringtun::noise::{Tunn, TunnResult};
 #[cfg(feature = "defmt")]
-use defmt::{debug, error, trace, warn};
+use defmt::{debug, error, info, trace, warn};
 use embassy_net::Stack;
 use embassy_net::udp::UdpSocket;
 use embassy_time::{Duration, Timer};

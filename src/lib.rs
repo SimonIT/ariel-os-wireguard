@@ -15,8 +15,7 @@ use embassy_net::Stack;
 use embassy_net::udp::{BindError, RecvError, SendError, UdpSocket};
 use embassy_net_driver_channel as ch;
 use embassy_net_driver_channel::driver::LinkState;
-#[cfg(feature = "defmt")]
-use defmt::{debug, error, info, warn};
+use embassy_time::Timer;
 use smoltcp::socket::udp::PacketMetadata;
 
 const MTU: usize = 1500;

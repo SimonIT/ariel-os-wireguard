@@ -107,6 +107,8 @@ impl<'d> Runner<'d> {
         #[cfg(feature = "proto-ipv6")]
         if let Some(ip_config) = stack.config_v6() {
             let ip = ip_config.address.address();
+            #[cfg(feature = "defmt")]
+            debug!("Bind to {}:{}", ip, config.port);
             if let Err(e) = socket.bind(SocketAddr::new(IpAddr::from(ip), config.port)) {
                 #[cfg(feature = "defmt")]
                 info!("bind error: {:?}", e);
@@ -117,6 +119,8 @@ impl<'d> Runner<'d> {
         #[cfg(feature = "proto-ipv4")]
         if let Some(ip_config) = stack.config_v4() {
             let ip = ip_config.address.address();
+            #[cfg(feature = "defmt")]
+            debug!("Bind to {}:{}", ip, config.port);
             if let Err(e) = socket.bind(SocketAddr::new(IpAddr::from(ip), config.port)) {
                 #[cfg(feature = "defmt")]
                 info!("bind error: {:?}", e);
@@ -125,8 +129,6 @@ impl<'d> Runner<'d> {
         }
 
         let mut tun = create_tunnel(config);
-
-        let mut needs_poll = true;
 
         loop {
             let routine_fut = async {
@@ -159,25 +161,26 @@ impl<'d> Runner<'d> {
 
             let rx_fut = async {
                 let rx_buf = rx_chan.rx_buf().await;
-                let rx_data = match needs_poll {
-                    true => &[][..],
-                    false => match socket.recv_from(&mut buf).await {
-                        Ok((0, remote_endpoint)) => return Err(RunError::Eof),
-                        Ok((n, remote_endpoint)) => &buf[..n],
-                        Err(e) => return Err(RunError::Read(e)),
-                    },
+                let rx_data = match socket.recv_from(&mut buf).await {
+                    Ok((0, remote_endpoint)) => return Err(RunError::Eof),
+                    Ok((n, remote_endpoint)) => &buf[..n],
+                    Err(e) => return Err(RunError::Read(e)),
                 };
                 Ok((rx_buf, rx_data))
             };
             let tx_fut = tx_chan.tx_buf();
             match select3(routine_fut, rx_fut, tx_fut).await {
                 Either3::First(_) => {
+                    #[cfg(feature = "defmt")]
                     debug!("Routine completed");
                 }
                 Either3::Second(r) => {
-                    needs_poll = false;
+                    #[cfg(feature = "defmt")]
+                    debug!("Have received packet to consume");
                     match consume(stack, &mut tun, &socket, config, r?).await {
                         Ok(len) => {
+                            #[cfg(feature = "defmt")]
+                            debug!("Consume successful");
                             if len > 0 {
                                 rx_chan.rx_done(len);
                             }
@@ -189,6 +192,8 @@ impl<'d> Runner<'d> {
                     }
                 }
                 Either3::Third(pkt) => {
+                    #[cfg(feature = "defmt")]
+                    debug!("Have to send packet of {} bytes", pkt.len());
                     match send_ip_packet(&mut tun, &socket, config, pkt).await {
                         Ok(_) => {
                             tx_chan.tx_done();

@@ -119,7 +119,10 @@ pub async fn consume(
     match decapsulate_result {
         TunnResult::WriteToNetwork(packet) => {
             #[cfg(feature = "defmt")]
-            debug!("Decapsulation requested sending a packet to WireGuard endpoint");
+            debug!(
+                "Decapsulation requested sending a packet to {}",
+                config.endpoint_addr
+            );
             match socket.send_to(packet, config.endpoint_addr).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
@@ -136,7 +139,7 @@ pub async fn consume(
                 match tun.decapsulate(None, &[], &mut send_buf) {
                     TunnResult::WriteToNetwork(packet) => {
                         match socket.send_to(packet, config.endpoint_addr).await {
-                            Ok(_) => Ok(()),
+                            Ok(_) => break Ok(0),
                             Err(e) => {
                                 #[cfg(feature = "defmt")]
                                 error!(
@@ -165,7 +168,7 @@ pub async fn consume(
             // For debugging purposes: parse packet
             trace_ip_packet("Received IP packet", packet);
 
-            if let Some(proto) = route_protocol(stack, packet) {
+            if let Some(proto) = route_protocol(config, packet) {
                 buf[..packet.len()].copy_from_slice(packet);
             }
             Ok(packet.len())
@@ -191,17 +194,13 @@ pub(crate) fn create_tunnel(config: &Config) -> Tunn {
 }
 
 /// Determine the inner protocol of the incoming IP packet (TCP/UDP).
-pub(crate) fn route_protocol(stack: Stack, packet: &[u8]) -> Option<PortProtocol> {
-    #[cfg(feature = "proto-ipv4")]
-    let ipv4 = stack.config_v4().map(|ip| ip.address.address());
-    #[cfg(feature = "proto-ipv6")]
-    let ipv6 = stack.config_v6().map(|ip| ip.address.address());
+pub(crate) fn route_protocol(config: &Config, packet: &[u8]) -> Option<PortProtocol> {
     match IpVersion::of_packet(packet) {
         #[cfg(feature = "proto-ipv4")]
         Ok(IpVersion::Ipv4) => Ipv4Packet::new_checked(&packet)
             .ok()
             // Only care if the packet is destined for this tunnel
-            .filter(|packet| ipv4.map(|ip| packet.dst_addr() == ip).unwrap_or(false))
+            .filter(|packet| packet.dst_addr() == config.source_peer_ip)
             .and_then(|packet| match packet.next_header() {
                 IpProtocol::Tcp => Some(PortProtocol::Tcp),
                 IpProtocol::Udp => Some(PortProtocol::Udp),
@@ -212,7 +211,7 @@ pub(crate) fn route_protocol(stack: Stack, packet: &[u8]) -> Option<PortProtocol
         Ok(IpVersion::Ipv6) => Ipv6Packet::new_checked(&packet)
             .ok()
             // Only care if the packet is destined for this tunnel
-            .filter(|packet| ipv6.map(|ip| packet.dst_addr() == ip).unwrap_or(false))
+            .filter(|packet| packet.dst_addr() == config.source_peer_ip)
             .and_then(|packet| match packet.next_header() {
                 IpProtocol::Tcp => Some(PortProtocol::Tcp),
                 IpProtocol::Udp => Some(PortProtocol::Udp),

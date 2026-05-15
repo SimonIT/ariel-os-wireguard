@@ -1,8 +1,7 @@
 #![no_std]
-mod config;
+pub mod config;
 mod wg;
 
-pub use crate::config::Config;
 use crate::wg::{MAX_PACKET, consume, create_tunnel, handle_routine_tun_result, send_ip_packet};
 use boringtun::noise::errors::WireGuardError;
 use core::convert::Infallible;
@@ -17,6 +16,7 @@ use embassy_net_driver_channel as ch;
 use embassy_net_driver_channel::driver::LinkState;
 use embassy_time::Timer;
 use smoltcp::socket::udp::PacketMetadata;
+use crate::config::Config;
 
 const MTU: usize = 1500;
 

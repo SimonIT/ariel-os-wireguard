@@ -2,6 +2,7 @@
 pub mod config;
 mod wg;
 
+use crate::config::Config;
 use crate::wg::{MAX_PACKET, consume, create_tunnel, handle_routine_tun_result, send_ip_packet};
 use boringtun::noise::errors::WireGuardError;
 use core::convert::Infallible;
@@ -9,14 +10,12 @@ use core::mem::MaybeUninit;
 use core::net::{IpAddr, SocketAddr};
 #[cfg(feature = "defmt")]
 use defmt::{debug, error, info, warn};
-use embassy_futures::select::{Either, Either3, Select3, select, select3};
+use embassy_futures::select::{Either3, select3};
 use embassy_net::Stack;
 use embassy_net::udp::{BindError, RecvError, SendError, UdpSocket};
 use embassy_net_driver_channel as ch;
 use embassy_net_driver_channel::driver::LinkState;
-use embassy_time::Timer;
 use smoltcp::socket::udp::PacketMetadata;
-use crate::config::Config;
 
 const MTU: usize = 1500;
 
@@ -133,12 +132,15 @@ impl<'d> Runner<'d> {
         loop {
             let routine_fut = async {
                 let mut send_buf = [0u8; MAX_PACKET];
+                #[cfg(feature = "defmt")]
                 debug!("Updating timers");
                 let mut res = tun.update_timers(&mut send_buf);
                 loop {
+                    #[cfg(feature = "defmt")]
                     debug!("Handling routine result");
                     match handle_routine_tun_result(&socket, config, res).await {
                         Ok(_) => {
+                            #[cfg(feature = "defmt")]
                             debug!("Successfully handled routine result");
                             state_chan.set_link_state(LinkState::Up);
                             break;

@@ -7,7 +7,7 @@ use boringtun::noise::{Tunn, TunnResult};
 use defmt::{debug, error, info, trace, warn};
 use embassy_net::Stack;
 use embassy_net::udp::UdpSocket;
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 #[cfg(feature = "proto-ipv4")]
 use smoltcp::wire::Ipv4Packet;
 #[cfg(feature = "proto-ipv6")]

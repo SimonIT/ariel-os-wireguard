@@ -12,8 +12,6 @@ use core::net::SocketAddrV4 as SocketAddr;
 #[cfg(all(feature = "proto-ipv6", not(feature = "proto-ipv4")))]
 use core::net::SocketAddrV6 as SocketAddr;
 
-const DEFAULT_PORT_FORWARD_SOURCE: &str = "127.0.0.1";
-
 #[derive(Clone)]
 pub struct Config {
     /// The private key of this peer. The corresponding public key should be registered in the WireGuard endpoint.

@@ -1,33 +1,49 @@
 [package]
 name = "ariel-os-wireguard"
 version = "0.1.0"
-license = "MIT OR Apache-2.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
-embassy-net = { version = "0.6.0", features = ["dhcpv4", "medium-ethernet", "udp", "medium-ip"] }
-embassy-time = "0.4.0"
-embassy-net-driver-channel = "0.3.0"
-boringtun = { git = "https://github.com/SimonIT/boringtun.git", branch = "no_std", default-features = false, features = ["ariel-os", "alloc"] }
-smoltcp = { version = "0.12.0", default-features = false, features = [
-    "socket",
-    "async",
-    "medium-ip",
-    "socket-udp"
+boringtun = { git = "https://github.com/SimonIT/boringtun.git", branch = "no_std", default-features = false, features = [
+  "alloc",
+  "ariel-os",
 ] }
-embassy-futures = "0.1.1"
-defmt = { version = "1.0.1", optional = true }
+defmt = { version = "1.1.1", optional = true }
+embassy-futures = "0.1.2"
+embassy-net = { version = "0.9.1", features = [
+  "dhcpv4",
+  "medium-ethernet",
+  "medium-ip",
+  "udp",
+] }
+embassy-net-driver-channel = "0.4.0"
+embassy-time = "0.5.1"
+smoltcp = { version = "0.13.1", default-features = false, features = [
+  "async",
+  "medium-ip",
+  "socket",
+  "socket-udp",
+] }
 
 [features]
 default = ["proto-ipv4", "proto-ipv6"]
 proto-ipv4 = ["embassy-net/proto-ipv4", "smoltcp/proto-ipv4"]
 proto-ipv6 = ["embassy-net/proto-ipv6", "smoltcp/proto-ipv6"]
-defmt = ["dep:defmt", "smoltcp/defmt", "embassy-net/defmt", "embassy-futures/defmt", "embassy-time/defmt", "embassy-net-driver-channel/defmt", "boringtun/defmt"]
+defmt = [
+  "dep:defmt",
+  "boringtun/defmt",
+  "embassy-futures/defmt",
+  "embassy-net-driver-channel/defmt",
+  "embassy-net/defmt",
+  "embassy-time/defmt",
+  "smoltcp/defmt",
+]
 
 [patch.crates-io]
 # boringtun
+ariel-os-threads = { git = "https://github.com/ariel-os/ariel-os.git", tag = "v0.5.0" }
 ip_network = { git = "https://github.com/SimonIT/ip_network.git", branch = "no_std" }
 ip_network_table = { git = "https://github.com/SimonIT/ip_network_table.git", branch = "no_std" }
 ip_network_table-deps-treebitmap = { git = "https://github.com/SimonIT/treebitmap.git", branch = "fix-alloc" }
-ariel-os-threads = { git = "https://github.com/ariel-os/ariel-os.git", tag = "v0.2.1" }
 ring = { git = "https://github.com/SimonIT/ring.git", branch = "ariel-os" }

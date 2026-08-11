@@ -2,7 +2,7 @@
 pub mod config;
 mod wg;
 
-use crate::config::Config;
+pub use crate::config::Config;
 use crate::wg::{MAX_PACKET, consume, create_tunnel, handle_routine_tun_result, send_ip_packet};
 use boringtun::noise::errors::WireGuardError;
 use core::convert::Infallible;
